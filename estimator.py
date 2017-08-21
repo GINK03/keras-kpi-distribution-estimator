@@ -1,7 +1,7 @@
 from keras.layers          import Lambda, Input, Dense, GRU, LSTM, RepeatVector
 from keras.layers.core     import Flatten
 from keras.callbacks       import LambdaCallback 
-from keras.models          import Model
+from keras.models          import Model, load_model
 from keras.optimizers      import SGD, RMSprop, Adam
 from keras.layers.wrappers import Bidirectional as Bi
 from keras.layers.wrappers import TimeDistributed as TD
@@ -14,16 +14,18 @@ from keras.layers.normalization import BatchNormalization as BN
 import keras.backend as K
 import numpy as np
 import json
+import sys
+import random
+import pickle
 
 inputs = Input(shape=(2,))
-x      = Dense(100, activation='relu')(inputs)
-x      = Dropout(0.5)(x)
-x      = Dense(100, activation='relu')(x)
-x      = Dropout(0.5)(x)
+x      = Dense(300, activation='relu')(inputs)
+x      = Dropout(0.8)(x)
+x      = Dense(300, activation='relu')(x)
+x      = Dropout(0.8)(x)
 x      = Dense(1, activation='linear')(x)
 est    = Model(inputs, x)
 est.compile(optimizer=Adam(), loss='mse')
-
 
 # categorical to linear
 SW1 = {
@@ -40,6 +42,7 @@ SW1 = {
   '60～69歳'  :1.0,
   '70歳～'    :1.1,
   }
+RSW1 = { f:k for k,f in SW1.items() }
 SW2 = {
   '300万未満'   :0.0,
   '300～500万'  :0.2,
@@ -48,7 +51,7 @@ SW2 = {
   '1000～1400万':0.8,
   '1400万以上'  :1.0
   }
-
+RSW2 = { f:k for k,f in SW2.items() }
 
 # load json from KPI map
 # and, normalize it
@@ -58,24 +61,81 @@ obj = json.loads( open('domain/www.buyma.com.json').read() )
 m = 0.0
 for age, income_freq in obj.items():
   for income, freq in income_freq.items():
-    #print(age, income, freq)
+    # print(age, income, freq)
     m = max(m, freq) 
 print(m)
 
 ## normalize and categorical to linear
-xs = []
-ys = []
-for age, income_freq in obj.items():
-  for income, freq in income_freq.items():
-    x1 = SW1[age]
-    x2 = SW2[income]
-    y = freq/m
-    x = [x1,x2]
-    print(x, y)
-    xs.append( x )
-    ys.append( y )
+if '--make_dataset' in sys.argv:
+  xs = []
+  ys = []
+  vxs = []
+  vys = []
+  totalx = []
+  totaly = []
+  for age, income_freq in obj.items():
+    for income, freq in income_freq.items():
+      x1 = SW1[age]
+      x2 = SW2[income]
+      y = freq/m
+      x = [x1,x2]
+      totalx.append( x )
+      totaly.append( y )
+      if random.random() < 0.8:
+        print(x, y)
+        xs.append( x )
+        ys.append( y )
+      else:
+        vxs.append( x )
+        vys.append( y )
 
-xs = np.array(xs)
-ys = np.array(ys)
+  xs = np.array(xs)
+  ys = np.array(ys)
+  vxs = np.array(vxs)
+  vys = np.array(vys)
+  totalx = np.array( totalx )
+  totaly = np.array( totaly )
+  open('dataset/dataset.pkl', 'wb').write( pickle.dumps([xs, ys, vxs, vys, totalx, totaly]) )
 
-est.fit(xs, ys, validation_split=0.2, epochs=5000)
+if '--train' in sys.argv:
+  xs, ys, vxs, vys, totalx, totaly = pickle.loads( open('dataset/dataset.pkl', 'rb').read() )
+  est.fit(xs, ys, validation_data=(vxs, vys), epochs=5000)
+  est.save_weights('est.h5')
+
+if '--predict' in sys.argv:
+  xs, ys, vxs, vys, totalx, totaly = pickle.loads( open('dataset/dataset.pkl', 'rb').read() )
+  est.load_weights('est.h5') 
+  ys = est.predict(totalx)
+  
+  age_income_freq = {}
+  for x, y in zip(totalx.tolist(), ys.tolist()):
+    print( x, y )
+    age = RSW1[ x[0] ]
+    income = RSW2[ x[1] ]
+    if age_income_freq.get(age) is None:
+      age_income_freq[age] = {}
+    #if age_income_freq[age].get( income ) is None:
+    age_income_freq[age][income] = y.pop()
+  open('predict.json', 'w').write( json.dumps(age_income_freq, indent=2, ensure_ascii=False) )   
+
+  # original 
+  age_income_freq = {}
+  for x, y in zip(totalx.tolist(), totaly.tolist()):
+    age = RSW1[ x[0] ]
+    income = RSW2[ x[1] ]
+    if age_income_freq.get(age) is None:
+      age_income_freq[age] = {}
+    #if age_income_freq[age].get( income ) is None:
+    age_income_freq[age][income] = y
+  open('origial.json', 'w').write( json.dumps(age_income_freq, indent=2, ensure_ascii=False) )   
+  
+  # drop
+  age_income_freq = {}
+  for x, y in zip(xs.tolist(), ys.tolist()):
+    age = RSW1[ x[0] ]
+    income = RSW2[ x[1] ]
+    if age_income_freq.get(age) is None:
+      age_income_freq[age] = {}
+    #if age_income_freq[age].get( income ) is None:
+    age_income_freq[age][income] = y.pop()
+  open('drop.json', 'w').write( json.dumps(age_income_freq, indent=2, ensure_ascii=False) )   
