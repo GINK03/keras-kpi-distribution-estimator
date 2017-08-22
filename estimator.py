@@ -17,12 +17,13 @@ import json
 import sys
 import random
 import pickle
+import re
 
 inputs = Input(shape=(2,))
-x      = Dense(300, activation='relu')(inputs)
-x      = Dropout(0.8)(x)
-x      = Dense(300, activation='relu')(x)
-x      = Dropout(0.8)(x)
+x      = Dense(200, activation='relu')(inputs)
+x      = Dropout(0.2)(x)
+x      = Dense(200, activation='relu')(x)
+x      = Dropout(0.2)(x)
 x      = Dense(1, activation='linear')(x)
 est    = Model(inputs, x)
 est.compile(optimizer=Adam(), loss='mse')
@@ -81,13 +82,42 @@ if '--make_dataset' in sys.argv:
       x = [x1,x2]
       totalx.append( x )
       totaly.append( y )
-      if random.random() < 0.8:
+      if random.random() < 0.6:
         print(x, y)
         xs.append( x )
         ys.append( y )
       else:
         vxs.append( x )
         vys.append( y )
+
+  xs = np.array(xs)
+  ys = np.array(ys)
+  vxs = np.array(vxs)
+  vys = np.array(vys)
+  totalx = np.array( totalx )
+  totaly = np.array( totaly )
+  open('dataset/dataset.pkl', 'wb').write( pickle.dumps([xs, ys, vxs, vys, totalx, totaly]) )
+
+if '--make_sample_dataset' in sys.argv:
+  xs = []
+  ys = []
+  vxs = []
+  vys = []
+  totalx = []
+  totaly = []
+  for line in open('sample/beta.txt'):
+    ents = re.split(r'\t', line.strip())
+    x1, x2, y = float(ents[0]), float(ents[1]), float(ents[-1])
+    x = [x1,x2]
+    totalx.append( x )
+    totaly.append( y )
+    if random.random() < 0.8:
+      print(x, y)
+      xs.append( x )
+      ys.append( y )
+    else:
+      vxs.append( x )
+      vys.append( y )
 
   xs = np.array(xs)
   ys = np.array(ys)
@@ -105,8 +135,11 @@ if '--train' in sys.argv:
 if '--predict' in sys.argv:
   xs, ys, vxs, vys, totalx, totaly = pickle.loads( open('dataset/dataset.pkl', 'rb').read() )
   est.load_weights('est.h5') 
-  ys = est.predict(totalx)
-  
+  pys = est.predict(totalx)
+  #for x,y in zip(xs.tolist(), ys.tolist()):
+  #  print('input', ' '.join(map(str,x)), y)
+ 
+  #sys.exit()
   age_income_freq = {}
   for x, y in zip(totalx.tolist(), ys.tolist()):
     print( x, y )
