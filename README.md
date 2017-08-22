@@ -30,3 +30,21 @@ est.compile(optimizer=Adam(), loss='mse')
 <p align="center">
   <img width="550px" src="https://user-images.githubusercontent.com/4949982/29544869-021e17b4-8726-11e7-8c80-c46e1d8700ff.png">
 </p>
+
+## 実測データでの実験
+実際のKPI情報を利用して、予想を行ってみます　　
+www.buyma.comの実測値を利用して、ランダムに２０％のデータを欠落させて、予想を行いました
+### データセットの作成
+```console
+$ python3 estimator.py --make_dataset
+```
+### 学習
+```cosnole
+$ python3 estimator.py --train
+```
+### 予想
+```console
+$ python3 estimator.py --predict
+```
+テストデータに関する誤差はmean square errorで0.039であった
+
