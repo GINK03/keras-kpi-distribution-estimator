@@ -15,7 +15,17 @@
 
 この仮説が正しいとする際、ある程度のサンプリングで、ディープラーニングは多様体を獲得し、未知の欠けてしまったデータに対して予測性能を発揮できることになります　　
 
-## 実験
+## ネットワークの定義 
 ```console
-
+inputs = Input(shape=(2,))
+x      = Dense(100, activation='relu')(inputs)
+x      = Dropout(0.7)(x)
+x      = Dense(100, activation='relu')(x)
+x      = Dropout(0.7)(x)
+x      = Dense(1, activation='sigmoid')(x)
+est    = Model(inputs, x)
+est.compile(optimizer=Adam(), loss='mse')  
 ```
+<p align="center">
+  <img width="550px" src="https://user-images.githubusercontent.com/4949982/29544869-021e17b4-8726-11e7-8c80-c46e1d8700ff.png">
+</p>
