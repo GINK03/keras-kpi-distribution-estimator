@@ -30,7 +30,7 @@ est.compile(optimizer=Adam(), loss='mse')
 <p align="center">
   <img width="550px" src="https://user-images.githubusercontent.com/4949982/29544869-021e17b4-8726-11e7-8c80-c46e1d8700ff.png">
 </p>
-<div aling="center"> 図1. ネットワーク　</div>
+<div align="center"> 図1. ネットワーク　</div>
 
 ## 実測データでの実験
 実際のKPI情報を利用して、予想を行ってみます　　
@@ -69,5 +69,5 @@ $ python3 estimator.py --predict
 <p align="center">
   <img width="550px" src="https://user-images.githubusercontent.com/4949982/29546247-2a338236-872e-11e7-85ec-19762d6029f1.png">
 </p>
-<div aling="center"> 図2. 真と予想値がほぼ一致することが確認できた　</div>
+<div align="center"> 図2. 真と予想値がほぼ一致することが確認できた　</div>
 
